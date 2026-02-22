@@ -146,69 +146,11 @@ export interface AuthState {
   isLoading: boolean;
 }
 
-export interface ActivityState {
-  activities: Activity[];
-  loading: boolean;
-  lastSync: number | null;
-  error: string | null;
-}
 
-export interface GearState {
-  bikes: Gear[];
-  shoes: Gear[];
-  loading: boolean;
-  error: string | null;
-}
 
-export interface SettingsState {
-  units: 'metric' | 'imperial';
-  theme: 'light' | 'dark';
-}
 
-export interface Stats {
-  totalDistance: number;
-  totalElevation: number;
-  totalMovingTime: number;
-  totalActivities: number;
-  activeDays: number;
-}
 
-export interface MonthlyData {
-  month: string;
-  distance: number;
-  elevation: number;
-  activities: number;
-}
 
-export interface YearlyData {
-  year: number;
-  distance: number;
-  elevation: number;
-  activities: number;
-}
 
-export interface WeeklyData {
-  week: string;
-  activities: number;
-  distance: number;
-}
 
-export interface ActivityTypeData {
-  type: string;
-  count: number;
-  distance: number;
-}
 
-export interface GearStats {
-  id: string;
-  name: string;
-  distance: number;
-  activities: number;
-  type: 'bike' | 'shoe';
-}
-
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-}

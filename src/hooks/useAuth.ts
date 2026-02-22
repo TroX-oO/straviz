@@ -1,6 +1,7 @@
 import { useSelector, useDispatch } from 'react-redux';
 import type { RootState, AppDispatch } from '../store/store';
 import { setTokens, logout as logoutAction } from '../store/slices/authSlice';
+import type { Athlete } from '../types';
 
 export function useAuth() {
   const dispatch = useDispatch<AppDispatch>();
@@ -10,7 +11,7 @@ export function useAuth() {
     accessToken: string;
     refreshToken: string;
     expiresAt: number;
-    athlete?: any;
+    athlete?: Athlete;
   }) => {
     dispatch(setTokens(tokens));
   };

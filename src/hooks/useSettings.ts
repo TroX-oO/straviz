@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 
-export type Units = 'metric' | 'imperial';
-export type ThemeMode = 'light' | 'dark';
+type Units = 'metric' | 'imperial';
+type ThemeMode = 'light' | 'dark';
 
-export interface Settings {
+interface Settings {
   units: Units;
   theme: ThemeMode;
   language: string;
@@ -75,4 +75,4 @@ export const useSettings = (): UseSettingsReturn => {
   };
 };
 
-export default useSettings;
+

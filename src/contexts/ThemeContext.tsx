@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useMemo, type ReactNode } from 'react';
 import { ThemeProvider as EmotionThemeProvider, Global, css } from '@emotion/react';
 import { lightTheme, darkTheme, type AppTheme } from '../theme/theme';
 
@@ -85,10 +85,4 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   );
 }
 
-export function useTheme() {
-  const context = useContext(ThemeContext);
-  if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
-}
+

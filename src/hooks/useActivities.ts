@@ -1,26 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
-
-export interface Activity {
-  id: number;
-  name: string;
-  type: string;
-  sport_type: string;
-  distance: number;
-  moving_time: number;
-  elapsed_time: number;
-  total_elevation_gain: number;
-  start_date: string;
-  start_date_local: string;
-  average_speed: number;
-  max_speed: number;
-  average_heartrate?: number;
-  max_heartrate?: number;
-  average_watts?: number;
-  kilojoules?: number;
-  suffer_score?: number;
-}
+import type { Activity } from '../types';
 
 interface UseActivitiesReturn {
   activities: Activity[];
@@ -37,7 +18,7 @@ export const useActivities = (page: number = 1, perPage: number = 30): UseActivi
   
   const accessToken = useSelector((state: RootState) => state.auth.accessToken);
 
-  const fetchActivities = async () => {
+  const fetchActivities = useCallback(async () => {
     console.log(`Fetching activities - Page: ${page}, Per Page: ${perPage}`);
     setLoading(true);
     setError(null);
@@ -71,12 +52,11 @@ export const useActivities = (page: number = 1, perPage: number = 30): UseActivi
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, perPage, accessToken]);
 
   useEffect(() => {
     fetchActivities();
-    console.log('Activities fetched:', activities.length);
-  }, [page, perPage, accessToken]);
+  }, [fetchActivities]);
   return {
     activities,
     totalActivities: activities.length,
@@ -86,4 +66,4 @@ export const useActivities = (page: number = 1, perPage: number = 30): UseActivi
   };
 };
 
-export default useActivities;
+

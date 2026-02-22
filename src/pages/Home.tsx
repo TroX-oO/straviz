@@ -1,10 +1,7 @@
 import React, { useEffect } from 'react';
 import styled from '@emotion/styled';
 import { keyframes } from '@emotion/react';
-import { redirectToStravaAuthorize } from '../api/strava';
-
-const STRAVA_CLIENT_ID = import.meta.env.VITE_STRAVA_CLIENT_ID;
-const REDIRECT_URI = import.meta.env.VITE_STRAVA_REDIRECT_URI;
+import { authorize } from '../api/strava';
 
 const float = keyframes`
   0%, 100% { transform: translateY(0px); }
@@ -212,7 +209,7 @@ const Home: React.FC = () => {
             des graphiques interactifs et des insights sur vos activités.
           </HeroDescription>
           
-          <StravaConnectBtn onClick={redirectToStravaAuthorize}>
+          <StravaConnectBtn onClick={authorize}>
             <StravaIcon viewBox="0 0 24 24" fill="currentColor">
               <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
             </StravaIcon>

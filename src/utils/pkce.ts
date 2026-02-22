@@ -22,26 +22,3 @@ function base64UrlEncode(array: Uint8Array): string {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-export function storeCodeVerifier(verifier: string): void {
-  sessionStorage.setItem('pkce_code_verifier', verifier);
-}
-
-export function getCodeVerifier(): string | null {
-  return sessionStorage.getItem('pkce_code_verifier');
-}
-
-export function clearCodeVerifier(): void {
-  sessionStorage.removeItem('pkce_code_verifier');
-}
-
-export function storeState(state: string): void {
-  sessionStorage.setItem('oauth_state', state);
-}
-
-export function getStoredState(): string | null {
-  return sessionStorage.getItem('oauth_state');
-}
-
-export function clearState(): void {
-  sessionStorage.removeItem('oauth_state');
-}

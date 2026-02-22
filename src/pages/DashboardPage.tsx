@@ -138,7 +138,7 @@ const formatDuration = (seconds: number): string => {
   return `${minutes}m`;
 };
 
-export const DashboardPage: React.FC = () => {
+const DashboardPage: React.FC = () => {
   const { loading: activitiesLoading, totalActivities, activities } = useActivities();
   const { totalStats, monthlyData, loading: statsLoading } = useStats();
   const { units } = useSettings();

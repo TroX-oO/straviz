@@ -17,7 +17,7 @@ const initialState: AuthState = {
   isLoading: true,
 };
 
-export const initializeAuth = createAsyncThunk('auth/initialize', async () => {
+const initializeAuth = createAsyncThunk('auth/initialize', async () => {
   const auth = await getAuth();
   const athlete = await getAthleteFromStorage();
 
@@ -32,7 +32,7 @@ export const initializeAuth = createAsyncThunk('auth/initialize', async () => {
   return null;
 });
 
-export const logoutAsync = createAsyncThunk('auth/logoutAsync', async () => {
+const logoutAsync = createAsyncThunk('auth/logoutAsync', async () => {
   await clearAllData();
 });
 
@@ -117,6 +117,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { setTokens, setAthlete, logout, refreshTokenSuccess, setLoading } =
+export const { setTokens, logout } =
   authSlice.actions;
 export default authSlice.reducer;

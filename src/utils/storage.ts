@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Activity, Athlete, Gear } from '../types';
+import type { Athlete } from '../types';
 
 interface StravizDB extends DBSchema {
   auth: {
@@ -13,15 +13,6 @@ interface StravizDB extends DBSchema {
   athlete: {
     key: string;
     value: Athlete;
-  };
-  activities: {
-    key: number;
-    value: Activity;
-    indexes: { 'by-date': string };
-  };
-  gear: {
-    key: string;
-    value: Gear;
   };
   settings: {
     key: string;
@@ -68,24 +59,12 @@ async function getDB(): Promise<IDBPDatabase<StravizDB>> {
 }
 
 // PKCE Storage (using sessionStorage for security)
-export function saveCodeVerifier(verifier: string): void {
-  sessionStorage.setItem('pkce_code_verifier', verifier);
-}
-
-export function getCodeVerifier(): string | null {
-  return sessionStorage.getItem('pkce_code_verifier');
-}
-
 export function clearCodeVerifier(): void {
   sessionStorage.removeItem('pkce_code_verifier');
 }
 
 export function saveOAuthState(state: string): void {
   sessionStorage.setItem('oauth_state', state);
-}
-
-export function getOAuthState(): string | null {
-  return sessionStorage.getItem('oauth_state');
 }
 
 export function clearOAuthState(): void {
@@ -125,74 +104,6 @@ export async function saveAthlete(athlete: Athlete): Promise<void> {
 export async function getAthleteFromStorage(): Promise<Athlete | null> {
   const db = await getDB();
   return (await db.get('athlete', 'current')) || null;
-}
-
-export async function clearAthlete(): Promise<void> {
-  const db = await getDB();
-  await db.delete('athlete', 'current');
-}
-
-// Activities Storage
-export async function saveActivities(activities: Activity[]): Promise<void> {
-  const db = await getDB();
-  const tx = db.transaction('activities', 'readwrite');
-  await Promise.all(activities.map((activity) => tx.store.put(activity)));
-  await tx.done;
-}
-
-export async function getActivitiesFromStorage(): Promise<Activity[]> {
-  const db = await getDB();
-  return db.getAll('activities');
-}
-
-export async function clearActivities(): Promise<void> {
-  const db = await getDB();
-  await db.clear('activities');
-}
-
-export async function getActivityById(id: number): Promise<Activity | undefined> {
-  const db = await getDB();
-  return db.get('activities', id);
-}
-
-// Gear Storage
-export async function saveGear(gear: Gear[]): Promise<void> {
-  const db = await getDB();
-  const tx = db.transaction('gear', 'readwrite');
-  await Promise.all(gear.map((g) => tx.store.put(g)));
-  await tx.done;
-}
-
-export async function getGearFromStorage(): Promise<Gear[]> {
-  const db = await getDB();
-  return db.getAll('gear');
-}
-
-export async function clearGear(): Promise<void> {
-  const db = await getDB();
-  await db.clear('gear');
-}
-
-// Settings Storage
-export async function saveSetting(key: string, value: string | number): Promise<void> {
-  const db = await getDB();
-  await db.put('settings', value, key);
-}
-
-export async function getSetting(key: string): Promise<string | number | undefined> {
-  const db = await getDB();
-  return db.get('settings', key);
-}
-
-// Sync Storage
-export async function saveLastSync(timestamp: number): Promise<void> {
-  const db = await getDB();
-  await db.put('sync', timestamp, 'lastSync');
-}
-
-export async function getLastSync(): Promise<number | null> {
-  const db = await getDB();
-  return (await db.get('sync', 'lastSync')) || null;
 }
 
 // Clear all data

@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store/store';
 
-export interface TotalStats {
+interface TotalStats {
   totalDistance: number;
   totalMovingTime: number;
   totalElevation: number;
@@ -16,7 +16,7 @@ export interface MonthlyData {
   activities: number;
 }
 
-export interface ActivityTypeData {
+interface ActivityTypeData {
   type: string;
   count: number;
   distance: number;
@@ -47,7 +47,7 @@ export const useStats = (): UseStatsReturn => {
   const [error, setError] = useState<string | null>(null);
 
   const accessToken = useSelector((state: RootState) => state.auth.accessToken);
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -156,11 +156,11 @@ export const useStats = (): UseStatsReturn => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken]);
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [fetchStats]);
 
   return {
     totalStats,
@@ -172,4 +172,4 @@ export const useStats = (): UseStatsReturn => {
   };
 };
 
-export default useStats;
+
