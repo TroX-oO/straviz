@@ -1,215 +1,201 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from '@emotion/styled';
-import { useActivities, useStats, useSettings } from '../hooks';
-import type { MonthlyData } from '../hooks';
+import { useAuth } from '../hooks/useAuth';
+import SyncTab from './dashboard/SyncTab';
+import ActivitiesTab from './dashboard/ActivitiesTab';
 
-// Styled components
-const Container = styled.div`
-  padding: 40px;
-  min-height: 100vh;
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type Tab = 'sync' | 'activities';
+
+interface NavItem {
+  id: Tab;
+  icon: string;
+  label: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { id: 'sync', icon: '↻', label: 'Synchronisation' },
+  { id: 'activities', icon: '⊞', label: 'Activités' },
+];
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+
+const Layout = styled.div`
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   color: white;
 `;
 
-const Header = styled.div`
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+
+const Sidebar = styled.nav`
+  width: 240px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 40px;
-  flex-wrap: wrap;
-  gap: 20px;
+  flex-direction: column;
+  overflow: hidden;
 `;
 
-const Title = styled.h1`
-  font-size: 2.5rem;
-  font-weight: 700;
-  margin: 0;
+const SidebarBrand = styled.div`
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+`;
+
+const BrandName = styled.span`
+  font-size: 1.4rem;
+  font-weight: 800;
   background: linear-gradient(90deg, #fc4c02, #ff6b35);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 `;
 
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 40px;
+const BrandTagline = styled.div`
+  font-size: 0.72rem;
+  color: #555;
+  margin-top: 2px;
+  letter-spacing: 0.04em;
 `;
 
-const StatCard = styled.div`
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  transition: transform 0.3s ease;
+const SidebarNav = styled.ul`
+  list-style: none;
+  margin: 0;
+  padding: 16px 12px;
+  flex: 1;
+`;
+
+const NavItemEl = styled.li<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: ${({ $active }) => ($active ? '600' : '400')};
+  color: ${({ $active }) => ($active ? '#ffffff' : '#888')};
+  background: ${({ $active }) => ($active ? 'rgba(252, 76, 2, 0.18)' : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? 'rgba(252, 76, 2, 0.3)' : 'transparent')};
+  transition: all 0.2s;
+  margin-bottom: 4px;
 
   &:hover {
-    transform: translateY(-5px);
+    background: ${({ $active }) =>
+      $active ? 'rgba(252, 76, 2, 0.22)' : 'rgba(255, 255, 255, 0.05)'};
+    color: ${({ $active }) => ($active ? '#ffffff' : '#ccc')};
   }
 `;
 
-const StatIcon = styled.span`
-  font-size: 2rem;
-  display: block;
-  margin-bottom: 12px;
+const NavIcon = styled.span`
+  font-size: 1.1rem;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
 `;
 
-const StatValue = styled.div`
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #fc4c02;
-  margin-bottom: 4px;
+const SidebarFooter = styled.div`
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 `;
 
-const StatLabel = styled.div`
-  font-size: 0.9rem;
-  color: #a0a0a0;
-`;
-
-const ChartsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 20px;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const ChartCard = styled.div`
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-`;
-
-const ChartTitle = styled.h3`
-  font-size: 1.2rem;
-  margin: 0 0 20px 0;
-  color: #e0e0e0;
-`;
-
-const LoadingContainer = styled.div`
+const AthleteRow = styled.div`
   display: flex;
-  justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  color: white;
-  font-size: 1.5rem;
+  gap: 10px;
 `;
 
-const MonthlyRow = styled.div`
+const AthleteAvatar = styled.div`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fc4c02, #ff6b35);
   display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
 `;
 
-const MonthlyDistance = styled.span`
-  color: #fc4c02;
+const AthleteName = styled.div`
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #ccc;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
-// Utility functions
-const formatDistance = (meters: number, units: 'metric' | 'imperial'): string => {
-  if (units === 'imperial') {
-    const miles = meters / 1609.34;
-    return `${miles.toFixed(1)} mi`;
-  }
-  const km = meters / 1000;
-  return `${km.toFixed(1)} km`;
-};
+// ─── Main content ─────────────────────────────────────────────────────────────
 
-const formatElevation = (meters: number, units: 'metric' | 'imperial'): string => {
-  if (units === 'imperial') {
-    const feet = meters * 3.28084;
-    return `${feet.toFixed(0)} ft`;
-  }
-  return `${meters.toFixed(0)} m`;
-};
+const Main = styled.main`
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px 48px;
 
-const formatDuration = (seconds: number): string => {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) {
-    return `${hours}h ${minutes}m`;
+  @media (max-width: 900px) {
+    padding: 24px 20px;
   }
-  return `${minutes}m`;
-};
+`;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 const DashboardPage: React.FC = () => {
-  const { loading: activitiesLoading, totalActivities, activities } = useActivities();
-  const { totalStats, monthlyData, loading: statsLoading } = useStats();
-  const { units } = useSettings();
+  const [activeTab, setActiveTab] = useState<Tab>('sync');
+  const { athlete } = useAuth();
 
-  const loading = activitiesLoading || statsLoading;
+  const initials = athlete
+    ? `${athlete.firstname[0] ?? ''}${athlete.lastname[0] ?? ''}`.toUpperCase()
+    : '?';
 
-  if (loading && totalActivities === 0) {
-    return <LoadingContainer>Chargement des données...</LoadingContainer>;
-  }
-
-  console.log(activities)
+  const fullname = athlete ? `${athlete.firstname} ${athlete.lastname}` : 'Athlète';
 
   return (
-    <Container>
-      <Header>
-        <Title>Dashboard</Title>
-      </Header>
+    <Layout>
+      {/* ── Sidebar ── */}
+      <Sidebar>
+        <SidebarBrand>
+          <BrandName>Straviz</BrandName>
+          <BrandTagline>Powered by Strava</BrandTagline>
+        </SidebarBrand>
 
-      <StatsGrid>
-        <StatCard>
-          <StatIcon>🛣️</StatIcon>
-          <StatValue>{formatDistance(totalStats.totalDistance, units)}</StatValue>
-          <StatLabel>Distance totale</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatIcon>⛰️</StatIcon>
-          <StatValue>{formatElevation(totalStats.totalElevation, units)}</StatValue>
-          <StatLabel>Dénivelé total</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatIcon>⏱️</StatIcon>
-          <StatValue>{formatDuration(totalStats.totalMovingTime)}</StatValue>
-          <StatLabel>Temps total</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatIcon>🏃</StatIcon>
-          <StatValue>{totalStats.totalActivities}</StatValue>
-          <StatLabel>Activités</StatLabel>
-        </StatCard>
-        <StatCard>
-          <StatIcon>📅</StatIcon>
-          <StatValue>{totalStats.activeDays}</StatValue>
-          <StatLabel>Jours actifs</StatLabel>
-        </StatCard>
-      </StatsGrid>
+        <SidebarNav>
+          {NAV_ITEMS.map((item) => (
+            <NavItemEl
+              key={item.id}
+              $active={activeTab === item.id}
+              onClick={() => setActiveTab(item.id)}
+            >
+              <NavIcon>{item.icon}</NavIcon>
+              {item.label}
+            </NavItemEl>
+          ))}
+        </SidebarNav>
 
-      <ChartsGrid>
-        <ChartCard>
-          <ChartTitle>Distance par mois</ChartTitle>
-          <div style={{ color: '#a0a0a0' }}>
-            {monthlyData.map((data: MonthlyData) => (
-              <MonthlyRow key={data.month}>
-                <span>{data.month}</span>
-                <MonthlyDistance>{formatDistance(data.distance, units)}</MonthlyDistance>
-              </MonthlyRow>
-            ))}
-          </div>
-        </ChartCard>
-        <ChartCard>
-          <ChartTitle>Types d'activités</ChartTitle>
-          <div style={{ color: '#a0a0a0' }}>
-            {totalActivities === 0 ? (
-              <p>Aucune activité trouvée. Synchronisez vos données Strava.</p>
-            ) : (
-              <p>Données disponibles après synchronisation.</p>
-            )}
-          </div>
-        </ChartCard>
-      </ChartsGrid>
-    </Container>
+        <SidebarFooter>
+          <AthleteRow>
+            <AthleteAvatar>{initials}</AthleteAvatar>
+            <AthleteName>{fullname}</AthleteName>
+          </AthleteRow>
+        </SidebarFooter>
+      </Sidebar>
+
+      {/* ── Main content ── */}
+      <Main>
+        {activeTab === 'sync' && <SyncTab />}
+        {activeTab === 'activities' && <ActivitiesTab />}
+      </Main>
+    </Layout>
   );
 };
 
 export default DashboardPage;
+

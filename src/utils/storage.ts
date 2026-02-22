@@ -1,5 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import type { Athlete } from '../types';
+import type { Activity, Athlete } from '../types';
 
 interface StravizDB extends DBSchema {
   auth: {
@@ -13,6 +13,11 @@ interface StravizDB extends DBSchema {
   athlete: {
     key: string;
     value: Athlete;
+  };
+  activities: {
+    key: number;
+    value: Activity;
+    indexes: { 'by-date': string };
   };
   settings: {
     key: string;
@@ -104,6 +109,38 @@ export async function saveAthlete(athlete: Athlete): Promise<void> {
 export async function getAthleteFromStorage(): Promise<Athlete | null> {
   const db = await getDB();
   return (await db.get('athlete', 'current')) || null;
+}
+
+// Activities Storage
+export async function saveActivities(activities: Activity[]): Promise<void> {
+  const db = await getDB();
+  const tx = db.transaction('activities', 'readwrite');
+  await tx.store.clear();
+  for (const activity of activities) {
+    tx.store.put(activity);
+  }
+  await tx.done;
+}
+
+export async function getActivitiesFromStorage(): Promise<Activity[]> {
+  const db = await getDB();
+  return db.getAll('activities');
+}
+
+export async function clearActivities(): Promise<void> {
+  const db = await getDB();
+  await db.clear('activities');
+}
+
+// Sync Storage
+export async function saveLastSync(timestamp: number): Promise<void> {
+  const db = await getDB();
+  await db.put('sync', timestamp, 'lastSync');
+}
+
+export async function getLastSync(): Promise<number | null> {
+  const db = await getDB();
+  return (await db.get('sync', 'lastSync')) || null;
 }
 
 // Clear all data
