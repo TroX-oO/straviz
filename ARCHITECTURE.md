@@ -34,6 +34,7 @@
 | `@emotion/styled`  | ^11.14.1 | CSS-in-JS : composants stylés (`styled.div`, etc.)              |
 | `axios`            | ^1.13.5  | Client HTTP utilisé pour les appels POST OAuth (token exchange) |
 | `idb`              | ^8.0.3   | Wrapper IndexedDB (persistance locale des tokens et du profil)  |
+| `recharts`         | ^3.7.0   | Bibliothèque de graphiques React (graphiques en barres, etc.)   |
 
 ### 2.2 Dev dependencies (`devDependencies`)
 
@@ -88,7 +89,8 @@ src/
 │   ├── DashboardPage.tsx     # Dashboard principal : sidebar + onglets
 │   └── dashboard/
 │       ├── SyncTab.tsx       # Onglet Synchronisation (fetch Strava → IDB)
-│       └── ActivitiesTab.tsx # Onglet Activités (lecture seule depuis IDB)
+│       ├── ActivitiesTab.tsx # Onglet Activités (lecture seule depuis IDB)
+│       └── StatsTab.tsx      # Onglet Statistiques (graphiques recharts + filtres)
 │
 ├── store/
 │   ├── store.ts              # Configuration Redux store
@@ -123,9 +125,10 @@ main.tsx
                 ├── /callback         → <CallbackPage>
                 └── <ProtectedRoute>
                     └── /dashboard    → <DashboardPage>
-                                           ├── <Sidebar> (nav : Synchronisation | Activités)
-                                           ├── [activeTab='sync']       → <SyncTab>
-                                           └── [activeTab='activities'] → <ActivitiesTab>
+                                           ├── <Sidebar> (nav : Synchronisation | Activités | Statistiques)
+                                           ├── [activeTab='sync']        → <SyncTab>
+                                           ├── [activeTab='activities']  → <ActivitiesTab>
+                                           └── [activeTab='stats']       → <StatsTab>
 ```
 
 ### 4.2 Redux Store
@@ -493,7 +496,38 @@ Les hooks peuvent définir des sous-ensembles typés localement si besoin.
 
 ---
 
-## 12. Configuration de build
+## 12. Onglets du Dashboard
+
+### `StatsTab` (`src/pages/dashboard/StatsTab.tsx`)
+
+Onglet de statistiques avancées alimenté par les activités locales (IndexedDB via `useStoredActivities`).
+
+**Fonctionnalités :**
+
+- **Raccourcis par année** : détecte automatiquement les années ayant au moins une activité en base ; sélectionne l'année la plus récente par défaut. Chaque année est affichée sous forme de chip cliquable.
+- **Sélecteur de période** : deux champs `<input type="date">` (du / au) permettant une plage libre ; la sélection d'un chip d'année pré-remplit les deux champs.
+- **Filtre métrique** : sélecteur parmi les métriques disponibles :
+
+| Clé                    | Libellé                    | Unité     |
+| ---------------------- | -------------------------- | --------- |
+| `distance`             | Distance                   | km        |
+| `moving_time`          | Temps en mouvement         | h         |
+| `elapsed_time`         | Temps total                | h         |
+| `total_elevation_gain` | Dénivelé positif           | m         |
+| `count`                | Nombre d'activités         | activités |
+| `suffer_score`         | Suffer score               | pts       |
+| `average_heartrate`    | FC moyenne (moy. pondérée) | bpm       |
+| `kilojoules`           | Énergie                    | kJ        |
+
+- **Groupement** : par **mois** (défaut) ou par **semaine ISO**. Les buckets vides (aucune activité) sont inclus à zéro pour un affichage continu.
+- **Graphique en barres** : rendu via `recharts` (`BarChart` + `ResponsiveContainer`), dégradé orange Strava, tooltip custom, grille horizontale discrète.
+- **Cartes de synthèse** : total, meilleur mois/semaine, moyenne sur les périodes actives, nombre de périodes actives.
+
+**Dépendances** : `recharts` (production), `useStoredActivities` (lecture IDB).
+
+---
+
+## 13. Configuration de build
 
 ### `vite.config.ts`
 
@@ -530,7 +564,7 @@ Règles actives :
 
 ---
 
-## 13. Conventions de code
+## 14. Conventions de code
 
 | Convention | Détail                                                                               |
 | ---------- | ------------------------------------------------------------------------------------ |
@@ -544,15 +578,16 @@ Règles actives :
 
 ---
 
-## 14. Points d'extension identifiés
+## 15. Points d'extension identifiés
 
 Les éléments suivants n'existent pas encore mais sont prévus ou naturellement intégrables dans l'architecture actuelle :
 
 1. ~~**`/activities`** — Liste filtrée/triée des activités~~ ✅ **Implémenté** dans l'onglet _Activités_ du dashboard (`ActivitiesTab.tsx`)
-2. **`/analytics`** — Graphiques avancés (données disponibles via `useStats`)
-3. **`/gear`** — Liste vélos/chaussures (type `Gear` défini, store IDB `gear` créé)
-4. **`/settings`** — Interface pour `useSettings` (structure déjà complète)
-5. ~~**Persistance activités offline**~~ ✅ **Implémenté** — store IDB `activities` actif, `useSync`/`useStoredActivities` opérationnels
-6. **Refresh automatique des tokens** — La logique `expiresAt` est dans Redux ; un intercepteur axios ou un check dans les hooks suffit
-7. **Nouveaux slices Redux** — `configureStore` est prêt à recevoir d'autres reducers (`activities`, `gear`, `settings`)
-8. **Cartes** — Le type `ActivityMap` (polyline Strava) est défini ; une bibliothèque map (Leaflet, Mapbox) peut être branchée
+2. ~~**Statistiques / graphiques**~~ ✅ **Implémenté** dans l'onglet _Statistiques_ du dashboard (`StatsTab.tsx`)
+3. **`/analytics`** — Graphiques avancés supplémentaires (données disponibles via `useStats`)
+4. **`/gear`** — Liste vélos/chaussures (type `Gear` défini, store IDB `gear` créé)
+5. **`/settings`** — Interface pour `useSettings` (structure déjà complète)
+6. ~~**Persistance activités offline**~~ ✅ **Implémenté** — store IDB `activities` actif, `useSync`/`useStoredActivities` opérationnels
+7. **Refresh automatique des tokens** — La logique `expiresAt` est dans Redux ; un intercepteur axios ou un check dans les hooks suffit
+8. **Nouveaux slices Redux** — `configureStore` est prêt à recevoir d'autres reducers (`activities`, `gear`, `settings`)
+9. **Cartes** — Le type `ActivityMap` (polyline Strava) est défini ; une bibliothèque map (Leaflet, Mapbox) peut être branchée

@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import styled from '@emotion/styled';
-import { useAuth } from '../hooks/useAuth';
-import SyncTab from './dashboard/SyncTab';
-import ActivitiesTab from './dashboard/ActivitiesTab';
+import React, { useState } from "react";
+import styled from "@emotion/styled";
+import { useAuth } from "../hooks/useAuth";
+import SyncTab from "./dashboard/SyncTab";
+import ActivitiesTab from "./dashboard/ActivitiesTab";
+import StatsTab from "./dashboard/StatsTab";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = 'sync' | 'activities';
+type Tab = "sync" | "activities" | "stats";
 
 interface NavItem {
   id: Tab;
@@ -15,8 +16,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'sync', icon: '↻', label: 'Synchronisation' },
-  { id: 'activities', icon: '⊞', label: 'Activités' },
+  { id: "sync", icon: "↻", label: "Synchronisation" },
+  { id: "activities", icon: "⊞", label: "Activités" },
+  { id: "stats", icon: "▦", label: "Statistiques" },
 ];
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
@@ -78,17 +80,19 @@ const NavItemEl = styled.li<{ $active: boolean }>`
   border-radius: 10px;
   cursor: pointer;
   font-size: 0.9rem;
-  font-weight: ${({ $active }) => ($active ? '600' : '400')};
-  color: ${({ $active }) => ($active ? '#ffffff' : '#888')};
-  background: ${({ $active }) => ($active ? 'rgba(252, 76, 2, 0.18)' : 'transparent')};
-  border: 1px solid ${({ $active }) => ($active ? 'rgba(252, 76, 2, 0.3)' : 'transparent')};
+  font-weight: ${({ $active }) => ($active ? "600" : "400")};
+  color: ${({ $active }) => ($active ? "#ffffff" : "#888")};
+  background: ${({ $active }) =>
+    $active ? "rgba(252, 76, 2, 0.18)" : "transparent"};
+  border: 1px solid
+    ${({ $active }) => ($active ? "rgba(252, 76, 2, 0.3)" : "transparent")};
   transition: all 0.2s;
   margin-bottom: 4px;
 
   &:hover {
     background: ${({ $active }) =>
-      $active ? 'rgba(252, 76, 2, 0.22)' : 'rgba(255, 255, 255, 0.05)'};
-    color: ${({ $active }) => ($active ? '#ffffff' : '#ccc')};
+      $active ? "rgba(252, 76, 2, 0.22)" : "rgba(255, 255, 255, 0.05)"};
+    color: ${({ $active }) => ($active ? "#ffffff" : "#ccc")};
   }
 `;
 
@@ -149,14 +153,16 @@ const Main = styled.main`
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const DashboardPage: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('sync');
+  const [activeTab, setActiveTab] = useState<Tab>("sync");
   const { athlete } = useAuth();
 
   const initials = athlete
-    ? `${athlete.firstname[0] ?? ''}${athlete.lastname[0] ?? ''}`.toUpperCase()
-    : '?';
+    ? `${athlete.firstname[0] ?? ""}${athlete.lastname[0] ?? ""}`.toUpperCase()
+    : "?";
 
-  const fullname = athlete ? `${athlete.firstname} ${athlete.lastname}` : 'Athlète';
+  const fullname = athlete
+    ? `${athlete.firstname} ${athlete.lastname}`
+    : "Athlète";
 
   return (
     <Layout>
@@ -190,12 +196,12 @@ const DashboardPage: React.FC = () => {
 
       {/* ── Main content ── */}
       <Main>
-        {activeTab === 'sync' && <SyncTab />}
-        {activeTab === 'activities' && <ActivitiesTab />}
+        {activeTab === "sync" && <SyncTab />}
+        {activeTab === "activities" && <ActivitiesTab />}
+        {activeTab === "stats" && <StatsTab />}
       </Main>
     </Layout>
   );
 };
 
 export default DashboardPage;
-
