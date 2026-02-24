@@ -3,6 +3,8 @@ import styled from "@emotion/styled";
 import {
   BarChart,
   Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -18,6 +20,7 @@ type GroupBy = "week" | "month";
 
 type MetricKey =
   | "distance"
+  | "distance_cumulative"
   | "moving_time"
   | "elapsed_time"
   | "total_elevation_gain"
@@ -32,6 +35,8 @@ interface MetricConfig {
   unit: string;
   extract: (a: Activity) => number;
   format: (v: number) => string;
+  /** Si true, les valeurs sont affichées en somme cumulée croissante */
+  cumulative?: boolean;
 }
 
 const METRICS: MetricConfig[] = [
@@ -41,6 +46,14 @@ const METRICS: MetricConfig[] = [
     unit: "km",
     extract: (a) => a.distance / 1000,
     format: (v) => `${v.toFixed(1)} km`,
+  },
+  {
+    key: "distance_cumulative",
+    label: "km cumulés",
+    unit: "km",
+    extract: (a) => a.distance / 1000,
+    format: (v) => `${v.toFixed(1)} km`,
+    cumulative: true,
   },
   {
     key: "moving_time",
@@ -435,8 +448,8 @@ const StatsTab: React.FC = () => {
 
   const metricConfig = METRICS.find((m) => m.key === metric) ?? METRICS[0];
 
-  // Filter + aggregate activities
-  const chartData = useMemo(() => {
+  // Filter + aggregate activities (valeurs brutes par période)
+  const rawChartData = useMemo(() => {
     if (!dateFrom || !dateTo) return [];
 
     const from = new Date(dateFrom + "T00:00:00");
@@ -467,15 +480,54 @@ const StatsTab: React.FC = () => {
     }));
   }, [activities, dateFrom, dateTo, groupBy, metricConfig]);
 
-  // Summary stats
+  // Pour les métriques cumulées, on transforme en somme croissante.
+  // On tronque les périodes futures (début > aujourd'hui) pour éviter
+  // un plateau plat sur la fin de la période courante.
+  const chartData = useMemo(() => {
+    if (!metricConfig.cumulative) return rawChartData;
+
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    const trimmed = rawChartData.filter((d) => {
+      // Dériver la date de début de la période depuis la clé interne
+      let periodStart: Date;
+      if (groupBy === "month") {
+        // clé : "YYYY-MM"
+        const [y, m] = d.key.split("-").map(Number);
+        periodStart = new Date(y, m - 1, 1);
+      } else {
+        // clé : "YYYY-SWW" → calculer le lundi de cette semaine ISO
+        const [yearStr, weekStr] = d.key.split("-S");
+        const year = Number(yearStr);
+        const week = Number(weekStr);
+        // 4 janvier est toujours en semaine 1
+        const jan4 = new Date(year, 0, 4);
+        const monday = new Date(jan4);
+        monday.setDate(
+          jan4.getDate() - ((jan4.getDay() + 6) % 7) + (week - 1) * 7,
+        );
+        periodStart = monday;
+      }
+      return periodStart <= today;
+    });
+
+    let acc = 0;
+    return trimmed.map((d) => {
+      acc = Math.round((acc + d.value) * 100) / 100;
+      return { ...d, value: acc };
+    });
+  }, [rawChartData, metricConfig.cumulative, groupBy]);
+
+  // Summary stats (toujours basées sur les valeurs brutes par période)
   const summaryStats = useMemo(() => {
-    if (!chartData.length) return null;
-    const nonZero = chartData.filter((d) => d.value > 0);
-    const total = chartData.reduce((s, d) => s + d.value, 0);
-    const max = Math.max(...chartData.map((d) => d.value));
+    if (!rawChartData.length) return null;
+    const nonZero = rawChartData.filter((d) => d.value > 0);
+    const total = rawChartData.reduce((s, d) => s + d.value, 0);
+    const max = Math.max(...rawChartData.map((d) => d.value));
     const avg = nonZero.length ? total / nonZero.length : 0;
     return { total, max, avg, activePeriods: nonZero.length };
-  }, [chartData]);
+  }, [rawChartData]);
 
   // Detect if a full year is selected (for chip highlight)
   const isFullYear = (year: number) => {
@@ -577,7 +629,7 @@ const StatsTab: React.FC = () => {
         </SummaryRow>
       )}
 
-      {/* ── Bar chart ── */}
+      {/* ── Chart ── */}
       {loading && <EmptyState>Chargement des activités…</EmptyState>}
 
       {!loading && loaded && chartData.length === 0 && (
@@ -594,55 +646,114 @@ const StatsTab: React.FC = () => {
             <ChartMetricBadge>{metricConfig.unit}</ChartMetricBadge>
           </ChartTitle>
           <ResponsiveContainer width="100%" height={340}>
-            <BarChart
-              data={chartData}
-              margin={{
-                top: 4,
-                right: 8,
-                left: 0,
-                bottom: groupBy === "week" ? 40 : 10,
-              }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="rgba(255,255,255,0.06)"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={{ fill: "#888", fontSize: 11 }}
-                tickLine={false}
-                axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
-                interval={groupBy === "week" ? 3 : 0}
-                angle={groupBy === "week" ? -45 : 0}
-                textAnchor={groupBy === "week" ? "end" : "middle"}
-              />
-              <YAxis
-                tick={{ fill: "#888", fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) =>
-                  v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
-                }
-                width={48}
-              />
-              <Tooltip
-                content={<CustomTooltip metricConfig={metricConfig} />}
-                cursor={{ fill: "rgba(252,76,2,0.06)" }}
-              />
-              <Bar
-                dataKey="value"
-                fill="url(#barGradient)"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={48}
-              />
-              <defs>
-                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#fc4c02" stopOpacity={0.9} />
-                  <stop offset="100%" stopColor="#ff6b35" stopOpacity={0.5} />
-                </linearGradient>
-              </defs>
-            </BarChart>
+            {metricConfig.cumulative ? (
+              <AreaChart
+                data={chartData}
+                margin={{
+                  top: 4,
+                  right: 8,
+                  left: 0,
+                  bottom: groupBy === "week" ? 40 : 10,
+                }}
+              >
+                <defs>
+                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#fc4c02" stopOpacity={0.35} />
+                    <stop
+                      offset="100%"
+                      stopColor="#fc4c02"
+                      stopOpacity={0.02}
+                    />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.06)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "#888", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+                  interval={groupBy === "week" ? 3 : 0}
+                  angle={groupBy === "week" ? -45 : 0}
+                  textAnchor={groupBy === "week" ? "end" : "middle"}
+                />
+                <YAxis
+                  tick={{ fill: "#888", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) =>
+                    v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
+                  }
+                  width={48}
+                />
+                <Tooltip
+                  content={<CustomTooltip metricConfig={metricConfig} />}
+                  cursor={{ stroke: "rgba(252,76,2,0.3)", strokeWidth: 1 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#fc4c02"
+                  strokeWidth={2}
+                  fill="url(#areaGradient)"
+                  dot={false}
+                  activeDot={{ r: 4, fill: "#fc4c02", strokeWidth: 0 }}
+                />
+              </AreaChart>
+            ) : (
+              <BarChart
+                data={chartData}
+                margin={{
+                  top: 4,
+                  right: 8,
+                  left: 0,
+                  bottom: groupBy === "week" ? 40 : 10,
+                }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(255,255,255,0.06)"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fill: "#888", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={{ stroke: "rgba(255,255,255,0.08)" }}
+                  interval={groupBy === "week" ? 3 : 0}
+                  angle={groupBy === "week" ? -45 : 0}
+                  textAnchor={groupBy === "week" ? "end" : "middle"}
+                />
+                <YAxis
+                  tick={{ fill: "#888", fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) =>
+                    v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
+                  }
+                  width={48}
+                />
+                <Tooltip
+                  content={<CustomTooltip metricConfig={metricConfig} />}
+                  cursor={{ fill: "rgba(252,76,2,0.06)" }}
+                />
+                <Bar
+                  dataKey="value"
+                  fill="url(#barGradient)"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={48}
+                />
+                <defs>
+                  <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#fc4c02" stopOpacity={0.9} />
+                    <stop offset="100%" stopColor="#ff6b35" stopOpacity={0.5} />
+                  </linearGradient>
+                </defs>
+              </BarChart>
+            )}
           </ResponsiveContainer>
         </ChartCard>
       )}
