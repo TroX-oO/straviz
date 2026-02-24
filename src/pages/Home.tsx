@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
-import styled from '@emotion/styled';
-import { keyframes } from '@emotion/react';
-import { authorize } from '../api/strava';
+import React, { useEffect } from "react";
+import styled from "@emotion/styled";
+import { keyframes } from "@emotion/react";
+import { authorize } from "../api/strava";
 
 const float = keyframes`
   0%, 100% { transform: translateY(0px); }
@@ -105,7 +105,13 @@ const HeroVisual = styled.div`
   }
 `;
 
-const FloatingCard = styled.div<{ delay?: number; top?: string; bottom?: string; left?: string; right?: string }>`
+const FloatingCard = styled.div<{
+  delay?: number;
+  top?: string;
+  bottom?: string;
+  left?: string;
+  right?: string;
+}>`
   position: absolute;
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -191,7 +197,7 @@ const FeatureIcon = styled.span`
 
 const Home: React.FC = () => {
   useEffect(() => {
-    console.log('Home component mounted');
+    console.log("Home component mounted");
   }, []);
 
   return (
@@ -199,16 +205,16 @@ const Home: React.FC = () => {
       <HeroSection>
         <HeroContent>
           <HeroTitle>
-            <GradientText>StravaViz</GradientText>
+            <GradientText>StraViz</GradientText>
           </HeroTitle>
           <HeroSubtitle>
             Visualisez vos performances sportives comme jamais auparavant
           </HeroSubtitle>
           <HeroDescription>
-            Connectez votre compte Strava et découvrez des analyses détaillées, 
+            Connectez votre compte Strava et découvrez des analyses détaillées,
             des graphiques interactifs et des insights sur vos activités.
           </HeroDescription>
-          
+
           <StravaConnectBtn onClick={authorize}>
             <StravaIcon viewBox="0 0 24 24" fill="currentColor">
               <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
@@ -216,7 +222,7 @@ const Home: React.FC = () => {
             Se connecter avec Strava
           </StravaConnectBtn>
         </HeroContent>
-        
+
         <HeroVisual>
           <FloatingCard delay={0} top="20%" left="10%">
             <CardIcon>🚴</CardIcon>
@@ -235,7 +241,7 @@ const Home: React.FC = () => {
           </FloatingCard>
         </HeroVisual>
       </HeroSection>
-      
+
       <FeaturesSection>
         <h2>Fonctionnalités</h2>
         <FeaturesGrid>
