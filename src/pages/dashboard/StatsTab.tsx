@@ -106,6 +106,52 @@ const METRICS: MetricConfig[] = [
   },
 ];
 
+// ─── Activity type labels ─────────────────────────────────────────────────────
+
+const ACTIVITY_TYPE_LABELS: Record<string, string> = {
+  AlpineSki: "Ski alpin",
+  BackcountrySki: "Ski de randonnée",
+  Canoeing: "Canoë",
+  Crossfit: "CrossFit",
+  EBikeRide: "Vélo électrique",
+  Elliptical: "Elliptique",
+  Golf: "Golf",
+  Handcycle: "Handbike",
+  Hike: "Randonnée",
+  IceSkate: "Patinage sur glace",
+  InlineSkate: "Roller",
+  Kayaking: "Kayak",
+  Kitesurf: "Kitesurf",
+  NordicSki: "Ski de fond",
+  Ride: "Vélo",
+  RockClimbing: "Escalade",
+  RollerSki: "Ski à roulettes",
+  Rowing: "Aviron",
+  Run: "Course à pied",
+  Sail: "Voile",
+  Skateboard: "Skateboard",
+  Snowboard: "Snowboard",
+  Snowshoe: "Raquettes",
+  Soccer: "Football",
+  StairStepper: "Stepper",
+  StandUpPaddling: "Stand Up Paddle",
+  Surfing: "Surf",
+  Swim: "Natation",
+  Velomobile: "Vélo couché",
+  VirtualRide: "Vélo virtuel",
+  VirtualRun: "Course virtuelle",
+  Walk: "Marche",
+  WeightTraining: "Musculation",
+  Wheelchair: "Fauteuil roulant",
+  Windsurf: "Windsurf",
+  Workout: "Entraînement",
+  Yoga: "Yoga",
+};
+
+function getActivityTypeLabel(type: string): string {
+  return ACTIVITY_TYPE_LABELS[type] ?? type;
+}
+
 // ─── Period ──────────────────────────────────────────────────────────────────
 
 interface Period {
@@ -179,12 +225,16 @@ function computePeriodRaw(
   activities: Activity[],
   groupBy: GroupBy,
   metricConfig: MetricConfig,
+  selectedTypes: Set<string>,
 ): { values: number[]; keys: string[] } {
   const from = new Date(period.from + "T00:00:00");
   const to = new Date(period.to + "T23:59:59");
   const filtered = activities.filter((a) => {
     const d = new Date(a.start_date);
-    return d >= from && d <= to;
+    if (d < from || d > to) return false;
+    if (selectedTypes.size > 0 && !selectedTypes.has(a.sport_type))
+      return false;
+    return true;
   });
   const periodKeys = generatePeriodKeys(from, to, groupBy);
   const buckets: Record<string, number> = {};
@@ -572,6 +622,41 @@ const AddPeriodButton = styled.button`
   }
 `;
 
+const TypeFilterRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
+const FilterSectionLabel = styled.span`
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 4px;
+  white-space: nowrap;
+`;
+
+const TypeChip = styled.button<{ $active: boolean }>`
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: 1.5px solid;
+  transition: all 0.15s;
+  background: ${({ $active }) => ($active ? "#fc4c02" : "transparent")};
+  border-color: ${({ $active }) =>
+    $active ? "#fc4c02" : "rgba(255,255,255,0.15)"};
+  color: ${({ $active }) => ($active ? "#fff" : "#aaa")};
+
+  &:hover {
+    border-color: #fc4c02;
+    color: ${({ $active }) => ($active ? "#fff" : "#fc4c02")};
+  }
+`;
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const StatsTab: React.FC = () => {
@@ -580,6 +665,7 @@ const StatsTab: React.FC = () => {
   const [groupBy, setGroupBy] = useState<GroupBy>("month");
   const [metric, setMetric] = useState<MetricKey>("distance");
   const [periods, setPeriods] = useState<Period[]>([]);
+  const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const defaultApplied = useRef(false);
 
   // Load activities on mount
@@ -593,6 +679,26 @@ const StatsTab: React.FC = () => {
     for (const a of activities) years.add(new Date(a.start_date).getFullYear());
     return Array.from(years).sort((a, b) => b - a);
   }, [activities]);
+
+  // Extract sport types present in the database, sorted by French label
+  const availableTypes = useMemo(() => {
+    const types = new Set<string>();
+    for (const a of activities) if (a.sport_type) types.add(a.sport_type);
+    return Array.from(types).sort((a, b) =>
+      getActivityTypeLabel(a).localeCompare(getActivityTypeLabel(b), "fr"),
+    );
+  }, [activities]);
+
+  const toggleType = (type: string) => {
+    setSelectedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  const clearTypes = () => setSelectedTypes(new Set());
 
   // Default selection: most recent year, once
   useEffect(() => {
@@ -650,9 +756,15 @@ const StatsTab: React.FC = () => {
     () =>
       periods.map((p) => ({
         period: p,
-        ...computePeriodRaw(p, activities, groupBy, metricConfig),
+        ...computePeriodRaw(
+          p,
+          activities,
+          groupBy,
+          metricConfig,
+          selectedTypes,
+        ),
       })),
-    [periods, activities, groupBy, metricConfig],
+    [periods, activities, groupBy, metricConfig, selectedTypes],
   );
 
   /**
@@ -716,13 +828,30 @@ const StatsTab: React.FC = () => {
       return filtered;
     });
 
+    // Détecte si toutes les périodes partagent la même structure MM-DD
+    // (seule l'année diffère) → on peut utiliser des labels de date réels
+    const sameStructure =
+      periods.length > 1 &&
+      periods.every(
+        (p) =>
+          p.from.slice(5) === periods[0].from.slice(5) &&
+          p.to.slice(5) === periods[0].to.slice(5),
+      );
+
     const maxLen = Math.max(...processedSeries.map((s) => s.length));
     const rows: Array<Record<string, string | number | undefined>> = [];
     for (let i = 0; i < maxLen; i++) {
-      const unit = groupBy === "month" ? "M" : "S";
-      const row: Record<string, string | number | undefined> = {
-        label: `${unit}+${i + 1}`,
-      };
+      // Label : date réelle (série 0) si même structure, sinon relatif M+1 / S+1
+      let label: string;
+      if (sameStructure && processedSeries[0][i]) {
+        const key = processedSeries[0][i].label;
+        label =
+          groupBy === "month" ? formatMonthLabel(key) : formatWeekLabel(key);
+      } else {
+        const unit = groupBy === "month" ? "M" : "S";
+        label = `${unit}+${i + 1}`;
+      }
+      const row: Record<string, string | number | undefined> = { label };
       allSeriesRaw.forEach(({ period }, si) => {
         const slot = processedSeries[si][i];
         // undefined (pas null) pour que recharts coupe la courbe proprement
@@ -845,6 +974,25 @@ const StatsTab: React.FC = () => {
           </Select>
         </ControlGroup>
       </ControlsRow>
+
+      {/* ── Activity type filter ── */}
+      {availableTypes.length > 0 && (
+        <TypeFilterRow>
+          <FilterSectionLabel>Types&nbsp;:</FilterSectionLabel>
+          <TypeChip $active={selectedTypes.size === 0} onClick={clearTypes}>
+            Tous
+          </TypeChip>
+          {availableTypes.map((type) => (
+            <TypeChip
+              key={type}
+              $active={selectedTypes.has(type)}
+              onClick={() => toggleType(type)}
+            >
+              {getActivityTypeLabel(type)}
+            </TypeChip>
+          ))}
+        </TypeFilterRow>
+      )}
 
       {/* ── Summary cards (single mode only) ── */}
       {isSingleMode && summaryStats && (
