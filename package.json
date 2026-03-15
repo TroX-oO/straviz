@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "deploy": "node scripts/deploy-sftp.mjs",
+    "build:deploy": "yarn build && yarn deploy",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -33,6 +35,7 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "knip": "^5.85.0",
+    "ssh2-sftp-client": "^12.1.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.48.0",
     "vite": "^7.3.1"

@@ -1,8 +1,18 @@
-import React, { createContext, useState, useEffect, useMemo, type ReactNode } from 'react';
-import { ThemeProvider as EmotionThemeProvider, Global, css } from '@emotion/react';
-import { lightTheme, darkTheme, type AppTheme } from '../theme/theme';
+import {
+  createContext,
+  useState,
+  useEffect,
+  useMemo,
+  type ReactNode,
+} from "react";
+import {
+  ThemeProvider as EmotionThemeProvider,
+  Global,
+  css,
+} from "@emotion/react";
+import { lightTheme, darkTheme, type AppTheme } from "../theme/theme";
 
-type ThemeMode = 'light' | 'dark';
+type ThemeMode = "light" | "dark";
 
 interface ThemeContextType {
   mode: ThemeMode;
@@ -24,20 +34,30 @@ const globalStyles = (theme: AppTheme) => css`
     box-sizing: border-box;
   }
 
-  html, body, #root {
+  html,
+  body,
+  #root {
     width: 100%;
     height: 100%;
     min-height: 100vh;
   }
 
   body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      sans-serif;
     background-color: ${theme.colors.background.default};
     color: ${theme.colors.text.primary};
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color ${theme.transitions.default}, color ${theme.transitions.default};
+    transition:
+      background-color ${theme.transitions.default},
+      color ${theme.transitions.default};
   }
 
   a {
@@ -51,20 +71,22 @@ const globalStyles = (theme: AppTheme) => css`
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [mode, setModeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('theme') as ThemeMode;
+    const saved = localStorage.getItem("theme") as ThemeMode;
     if (saved) return saved;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
   });
 
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.remove('light', 'dark');
+    root.classList.remove("light", "dark");
     root.classList.add(mode);
-    localStorage.setItem('theme', mode);
+    localStorage.setItem("theme", mode);
   }, [mode]);
 
   const toggleTheme = () => {
-    setModeState((prev) => (prev === 'light' ? 'dark' : 'light'));
+    setModeState((prev) => (prev === "light" ? "dark" : "light"));
   };
 
   const setTheme = (newMode: ThemeMode) => {
@@ -72,7 +94,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
   };
 
   const theme = useMemo(() => {
-    return mode === 'dark' ? darkTheme : lightTheme;
+    return mode === "dark" ? darkTheme : lightTheme;
   }, [mode]);
 
   return (
@@ -84,5 +106,3 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     </ThemeContext.Provider>
   );
 }
-
-

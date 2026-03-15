@@ -1,7 +1,6 @@
-
-import styled from '@emotion/styled';
-import { useAuth } from '../hooks/useAuth';
-import { Link, Navigate } from 'react-router-dom';
+import styled from "@emotion/styled";
+import { useAuth } from "../hooks/useAuth";
+import { Link, Navigate } from "react-router-dom";
 
 const LoginContainer = styled.div`
   display: flex;
@@ -12,9 +11,10 @@ const LoginContainer = styled.div`
 `;
 
 const LoginButton = styled(Link)`
-  background-color: ${props => props.theme.colors.primary};
+  background-color: ${(props) => props.theme.colors.primary.main};
   color: white;
-  padding: ${props => props.theme.spacing.md} ${props => props.theme.spacing.xl};
+  padding: ${(props) => props.theme.spacing(2)}
+    ${(props) => props.theme.spacing(4)};
   border: none;
   border-radius: 4px;
   font-size: 1.2rem;
@@ -27,21 +27,19 @@ const LoginButton = styled(Link)`
 `;
 
 const LoginPage = () => {
-    const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
 
-    if (isAuthenticated) {
-        return <Navigate to="/dashboard" />;
-    }
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" />;
+  }
 
-    return (
-        <LoginContainer>
-            <h1>Strava Dashboard</h1>
-            <p>Please login to continue</p>
-            <LoginButton to="/">
-                Login with Strava
-            </LoginButton>
-        </LoginContainer>
-    );
+  return (
+    <LoginContainer>
+      <h1>Strava Dashboard</h1>
+      <p>Please login to continue</p>
+      <LoginButton to="/">Login with Strava</LoginButton>
+    </LoginContainer>
+  );
 };
 
 export default LoginPage;
